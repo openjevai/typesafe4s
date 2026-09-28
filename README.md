@@ -3,6 +3,11 @@
 A Scala 3 SDK for the [TypeSafe](https://docs.typesafe.ai) System One API (`jev` model family):
 send state and typed questions, get typed answers with calibrated probabilities.
 
+> **OpenJEV support:** Jev is built by [TypeSafe](https://typesafe.ai). This fork keeps TypeSafe as the
+> default and adds optional support for [OpenJEV](https://openjev.sh), a free community gateway to the
+> same Jev model — set `OPENJEV_API_KEY` (or `JEV_PROVIDER=openjev`) to use it. Original project:
+> https://github.com/gruggiero/typesafe4s by @gruggiero.
+
 > **Status: 0.1 development.** The full pipeline — error model, wire codec, question model, retry,
 > transport, per-backend facades, batching and JSON adapters — is implemented and verified; the API
 > may still shift before the first tagged release.
@@ -79,6 +84,34 @@ sbt "examplesCe3_8_4/runMain typesafe4s.examples.ConfidenceRouting"   # confiden
 # and likewise for examplesOx3_8_4 / examplesKyo3_8_4 / examplesPekko3_8_4
 # (each row also has a `3_9_0` cell — see "Scala versions" below)
 ```
+
+## OpenJEV (optional gateway)
+
+TypeSafe stays the default. To route the same calls through [OpenJEV](https://openjev.sh) — a free
+community gateway to the same Jev model — set `OPENJEV_API_KEY` instead of `TYPESAFE_API_KEY` and pick
+the provider with `JEV_PROVIDER`:
+
+```bash
+export OPENJEV_API_KEY=…        # from https://openjev.sh/dashboard
+export JEV_PROVIDER=openjev     # optional; also auto-selected when only OPENJEV_API_KEY is set
+```
+
+```scala
+config <- ZIO.fromEither(TypesafeConfig.resolveProvider()) // reads JEV_PROVIDER + OPENJEV_API_KEY
+```
+
+or, without the environment helper:
+
+```scala
+config <- ZIO.fromEither(TypesafeConfig.resolve(provider = Some("openjev")))
+```
+
+Selection rule: an explicit `JEV_PROVIDER=openjev` wins; otherwise TypeSafe if `TYPESAFE_API_KEY` is
+set (unchanged default); otherwise OpenJEV if only `OPENJEV_API_KEY` is set. The request/response
+contract is identical — only the endpoint (`https://api.openjev.sh`), model id (`openjev`) and key
+variable differ. `TYPESAFE_BASE_URL` / `TYPESAFE_DEFAULT_MODEL` still override the defaults if set.
+OpenJEV signals overload with HTTP 503 (TypeSafe uses 529); both are already in the shipped retryable
+status set (`500–599`), so the retry policy needs no change.
 
 ## Live tests
 
